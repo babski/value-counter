@@ -1,0 +1,73 @@
+plugins {
+    id 'org.springframework.boot' version '2.4.5'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'com.palantir.docker' version '0.34.0'
+    id 'java'
+    id 'groovy'
+}
+
+group = 'com.mbabski'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+docker {
+    name "${project.name}"
+    dockerfile file('docker/Dockerfile')
+    copySpec.from(jar).rename(".*","app.jar")
+    buildArgs(['JAR_FILE': "app.jar"])
+}
+
+ext {
+    set('codehausGroovyVersion', "3.0.8")
+    set('restAssuredVersion', "4.4.0")
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation:2.7.1'
+
+    implementation 'org.springdoc:springdoc-openapi-ui:1.6.9'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    runtimeOnly 'com.h2database:h2'
+
+    implementation 'org.codehaus.groovy:groovy:3.0.6'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.hamcrest:hamcrest:2.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testImplementation('org.spockframework:spock-core:2.0-groovy-3.0') {
+        exclude group: 'org.codehaus.groovy'
+    }
+    testImplementation 'org.spockframework:spock-spring:2.0-groovy-3.0'
+    testImplementation 'org.spockframework:spock-junit4:2.0-groovy-3.0'
+    testImplementation "io.rest-assured:rest-assured:${restAssuredVersion}"
+    testImplementation "io.rest-assured:json-path:${restAssuredVersion}"
+    testImplementation "io.rest-assured:xml-path:${restAssuredVersion}"
+
+    testImplementation("org.codehaus.groovy:groovy-xml:${codehausGroovyVersion}") {
+        exclude group: 'org.codehaus.groovy'
+    }
+    testImplementation("org.codehaus.groovy:groovy-json:${codehausGroovyVersion}") {
+        exclude group: 'org.codehaus.groovy'
+    }
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        exceptionFormat = 'full'
+    }
+}
