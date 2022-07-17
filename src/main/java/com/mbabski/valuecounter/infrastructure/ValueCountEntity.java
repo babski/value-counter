@@ -6,12 +6,13 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import java.time.LocalDateTime;
 import com.mbabski.valuecounter.api.ValueCount;
+import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity(name = "value_count")
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 @EqualsAndHashCode
 public class ValueCountEntity {
@@ -29,14 +30,14 @@ public class ValueCountEntity {
 
     int totalCount;
 
-    public ValueCountEntity(ValueCount valueCount) {
+    ValueCountEntity(ValueCount valueCount) {
         this.type = valueCount.getType();
         this.value = valueCount.getValue();
         this.firstSeen = valueCount.getFirstSeen();
         this.totalCount = valueCount.getTotalCount();
     }
 
-    public ValueCountEntity modifyAndGet(ValueCount valueCount) {
+    ValueCountEntity modifyAndGet(ValueCount valueCount) {
         this.type = valueCount.getType();
         this.totalCount = valueCount.getTotalCount();
         return this;

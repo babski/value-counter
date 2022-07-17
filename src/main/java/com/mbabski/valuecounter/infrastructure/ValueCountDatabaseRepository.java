@@ -36,8 +36,7 @@ class ValueCountDatabaseRepository implements ValueCountRepository {
     @Override
     public ValueCount update(ValueCount valueCount) {
         return repository.findByValue(valueCount.getValue())
-                .map(entity -> entity.modifyAndGet(valueCount))
-                .map(entity -> repository.save(entity).toDomain())
+                .map(entity -> entity.modifyAndGet(valueCount).toDomain())
                 .orElseThrow(() -> new ValueCountNotFoundException(valueCount.getValue()));
     }
 }

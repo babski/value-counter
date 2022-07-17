@@ -23,19 +23,13 @@ class ValueCountServiceUT extends Specification {
         given:
             repository.save(new ValueCount(ANY_TYPE, ANY_VALUE, YESTERDAY_NOON, ANY_COUNT))
 
-        when:
-            def exists = valueCountService.existsByValue(ANY_VALUE)
-
-        then:
-            exists
+        expect:
+            valueCountService.existsByValue(ANY_VALUE)
     }
 
     def 'Any record does not exist in the empty repository'() {
-        when:
-            def exists = valueCountService.existsByValue(ANY_VALUE)
-
-        then:
-            !exists
+        expect:
+            !valueCountService.existsByValue(ANY_VALUE)
     }
 
     def 'An attempt to fetch any valueCount from empty repository throws the exception'() {
@@ -44,7 +38,7 @@ class ValueCountServiceUT extends Specification {
 
         then:
             ValueCountNotFoundException exception = thrown()
-            exception.getMessage() == "Record of value '1.2.3.4' cannot be found"
+            exception.message == "Record of value '1.2.3.4' cannot be found"
     }
 
     def 'An attempt to fetch persisted valueCount by its value ends up in success'() {
@@ -75,16 +69,19 @@ class ValueCountServiceUT extends Specification {
             def today = LocalDate.now().atStartOfDay()
             def valueCount = new ValueCount(ANY_TYPE, ANY_VALUE, YESTERDAY_NOON, ANY_COUNT)
             repository.save(valueCount)
+            int givenTotalCount = 13
+            String givenNewType = 'new-type'
 
         when:
-            valueCountService.createOrUpdateValueCount(new ValueCount('new-type', ANY_VALUE, today, 13))
+            valueCountService.createOrUpdateValueCount(new ValueCount(givenNewType, ANY_VALUE, today, givenTotalCount))
 
         then:
-            def fetchedValueCount = valueCountService.getValueCount(ANY_VALUE)
-            fetchedValueCount.getType() == 'new-type'
-            fetchedValueCount.getValue() == ANY_VALUE
-            fetchedValueCount.getFirstSeen() == YESTERDAY_NOON
-            fetchedValueCount.getTotalCount() == 13
+            with(valueCountService.getValueCount(ANY_VALUE)) {
+                type == givenNewType
+                totalCount == givenTotalCount
+                value == ANY_VALUE
+                firstSeen == YESTERDAY_NOON
+            }
     }
 
 }

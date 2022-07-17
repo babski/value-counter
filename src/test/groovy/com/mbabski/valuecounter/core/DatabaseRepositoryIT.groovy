@@ -1,11 +1,9 @@
 package com.mbabski.valuecounter.core
 
 import com.mbabski.valuecounter.infrastructure.DatabaseIntegrationTestConfig
+import com.mbabski.valuecounter.infrastructure.ValueCountCRUDRepository
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.test.annotation.DirtiesContext
-
-import java.sql.Timestamp
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager
 
 import static com.mbabski.valuecounter.ValueCountFixtures.anotherHavingDifferentFields
 import static com.mbabski.valuecounter.ValueCountFixtures.anotherHavingTheSameValueField
@@ -17,9 +15,11 @@ class DatabaseRepositoryIT extends DatabaseIntegrationTestConfig {
     ValueCountRepository repository
 
     @Autowired
-    JdbcTemplate jdbcTemplate
+    ValueCountCRUDRepository valueCountCRUDRepository
 
-    @DirtiesContext
+    @Autowired
+    TestEntityManager testEntityManager
+
     def 'ValueCount is correctly persisted in repository'() {
         given:
             def valueCount = get()
@@ -27,16 +27,20 @@ class DatabaseRepositoryIT extends DatabaseIntegrationTestConfig {
         when:
             repository.save(valueCount)
 
+        and:
+            flushData()
+
         then:
-            def results = jdbcTemplate.queryForList("SELECT * FROM value_count")
+            def results = valueCountCRUDRepository.findAll()
             results.size() == 1
-            results[0]['type'] == valueCount.getType()
-            results[0]['value_field'] == valueCount.getValue()
-            results[0]['first_Seen'] == Timestamp.valueOf(valueCount.getFirstSeen())
-            results[0]['total_Count'] == valueCount.getTotalCount()
+            with(results.first()) {
+                type == valueCount.type
+                value == valueCount.value
+                totalCount == valueCount.totalCount
+                firstSeen == valueCount.firstSeen
+            }
     }
 
-    @DirtiesContext
     def 'ValueCount of another value field is correctly persisted in repository'() {
         given:
             def valueCount1 = get()
@@ -46,12 +50,13 @@ class DatabaseRepositoryIT extends DatabaseIntegrationTestConfig {
         when:
             repository.save(valueCount2)
 
+        and:
+            flushData()
+
         then:
-            def results = jdbcTemplate.queryForList("SELECT * FROM value_count")
-            results.size() == 2
+            valueCountCRUDRepository.findAll().size() == 2
     }
 
-    @DirtiesContext
     def 'ValueCount of the same value field as persisted is correctly updated in repository'() {
         given:
             def valueCount1 = get()
@@ -61,40 +66,52 @@ class DatabaseRepositoryIT extends DatabaseIntegrationTestConfig {
         when:
             repository.update(valueCount2)
 
+        and:
+            flushData()
+
         then:
-            def results = jdbcTemplate.queryForList("SELECT * FROM value_count")
-            results.size() == 1
-            results[0]['type'] == valueCount2.getType()
-            results[0]['value_field'] == valueCount1.getValue()
-            results[0]['first_Seen'] == Timestamp.valueOf(valueCount1.getFirstSeen())
-            results[0]['total_Count'] == valueCount2.getTotalCount()
+            def results = valueCountCRUDRepository.findAll()
+            results.size == 1
+        and:
+            with(results.first()) {
+                type == valueCount2.getType()
+                value == valueCount1.getValue()
+                firstSeen == valueCount1.getFirstSeen()
+                totalCount == valueCount2.getTotalCount()
+            }
     }
 
-    @DirtiesContext
     def 'ValueCount existence is correctly retrieved from repository'() {
         given:
             def valueCount = get()
             repository.save(valueCount)
 
-        when:
-            def exists = repository.existsByValue(valueCount.getValue())
+        and:
+            flushData()
 
-        then:
-            exists
+        expect:
+            repository.existsByValue(valueCount.getValue())
     }
 
-    @DirtiesContext
     def 'ValueCount is correctly retrieved from repository'() {
         given:
             def valueCount = get()
             repository.save(valueCount)
 
+        and:
+            flushData()
+
         when:
             def valueCountOptional = repository.findByValue(valueCount.getValue())
 
         then:
-            valueCountOptional.isPresent()
+            valueCountOptional.present
             valueCountOptional.get() == valueCount
+    }
+
+    private void flushData() {
+        testEntityManager.flush()
+        testEntityManager.clear()
     }
 
 }

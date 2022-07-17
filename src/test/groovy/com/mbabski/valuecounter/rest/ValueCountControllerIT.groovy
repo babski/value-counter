@@ -1,13 +1,13 @@
 package com.mbabski.valuecounter.rest
 
-import com.mbabski.valuecounter.WebIntegrationTestConfiguration
 import com.mbabski.valuecounter.api.ValueCount
 import com.mbabski.valuecounter.core.ValueCountService
+import com.mbabski.valuecounter.error.DefaultExceptionHandler
+import com.mbabski.valuecounter.error.GlobalExceptionHandler
 import com.mbabski.valuecounter.error.ValueCountNotFoundException
 import io.restassured.RestAssured
-import org.springframework.beans.factory.annotation.Autowired
+import org.spockframework.spring.SpringBean
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.SpringBootConfiguration
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.Configuration
@@ -28,14 +28,13 @@ import static com.mbabski.valuecounter.error.GlobalExceptionHandler.DATETIME_FOR
 import static com.mbabski.valuecounter.error.GlobalExceptionHandler.DATETIME_FORMAT_MESSAGE
 import static com.mbabski.valuecounter.error.GlobalExceptionHandler.VALIDATION_MESSAGE
 
-@SpringBootConfiguration
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ComponentScan(excludeFilters = [@ComponentScan.Filter(type = FilterType.ANNOTATION, value = Configuration)])
-@Import([WebIntegrationTestConfiguration, ValueCountController])
+@Import([ValueCountController, DefaultExceptionHandler, GlobalExceptionHandler])
 class ValueCountControllerIT extends Specification {
 
-    @Autowired
-    private ValueCountService valueCountService
+    @SpringBean
+    private ValueCountService valueCountService = Mock()
 
     @Value('${local.server.port}')
     private Integer serverPort
@@ -81,9 +80,11 @@ class ValueCountControllerIT extends Specification {
 
         then:
             response.statusCode() == HttpStatus.BAD_REQUEST.value()
-            response.body().jsonPath().get("status") == 400
-            response.body().jsonPath().get("message") == VALIDATION_MESSAGE
-            response.body().jsonPath().get("details") == 'totalCount must be greater than or equal to 0'
+            with(response.body().jsonPath()) {
+                status == 400
+                message == VALIDATION_MESSAGE
+                details == 'totalCount must be greater than or equal to 0'
+            }
     }
 
     def 'Attempt to create a valueCount with a count above 100 returns 400 HTTP response code status'() {
@@ -98,9 +99,11 @@ class ValueCountControllerIT extends Specification {
 
         then:
             response.statusCode() == HttpStatus.BAD_REQUEST.value()
-            response.body().jsonPath().get("status") == 400
-            response.body().jsonPath().get("message") == VALIDATION_MESSAGE
-            response.body().jsonPath().get("details") == 'totalCount must be less than or equal to 100'
+            with(response.body().jsonPath()) {
+                status == 400
+                message == VALIDATION_MESSAGE
+                details == 'totalCount must be less than or equal to 100'
+            }
     }
 
 
@@ -116,9 +119,11 @@ class ValueCountControllerIT extends Specification {
 
         then:
             response.statusCode() == HttpStatus.BAD_REQUEST.value()
-            response.body().jsonPath().get("status") == 400
-            response.body().jsonPath().get("message") == VALIDATION_MESSAGE
-            response.body().jsonPath().get("details") == 'firstSeen must be a past date'
+            with(response.body().jsonPath()) {
+                status == 400
+                message == VALIDATION_MESSAGE
+                details == 'firstSeen must be a past date'
+            }
     }
 
     def 'Attempt to create a valueCount with a future firstSeen datetime and count above 100 returns 400 HTTP response code status with respective details'() {
@@ -133,10 +138,12 @@ class ValueCountControllerIT extends Specification {
 
         then:
             response.statusCode() == HttpStatus.BAD_REQUEST.value()
-            response.body().jsonPath().get("status") == 400
-            response.body().jsonPath().get("message") == VALIDATION_MESSAGE
-            response.body().jsonPath().get("details").toString().contains('firstSeen must be a past date')
-            response.body().jsonPath().get("details").toString().contains('totalCount must be less than or equal to 100')
+            with(response.body().jsonPath()) {
+                status == 400
+                message == VALIDATION_MESSAGE
+                details.contains('firstSeen must be a past date')
+                details.contains('totalCount must be less than or equal to 100')
+            }
     }
 
     def 'Attempt to create a valueCount with an incorrect firstSeen datetime format returns 400 HTTP response code status'() {
@@ -150,10 +157,12 @@ class ValueCountControllerIT extends Specification {
             final response = request.post('/api/valueCounts')
 
         then:
-            response.statusCode() == HttpStatus.BAD_REQUEST.value()
-            response.body().jsonPath().get("status") == 400
-            response.body().jsonPath().get("message") == DATETIME_FORMAT_MESSAGE
-            response.body().jsonPath().get("details") == DATETIME_FORMAT_DETAILS
+            response.statusCode == HttpStatus.BAD_REQUEST.value
+            with(response.body().jsonPath()) {
+                status == 400
+                message == DATETIME_FORMAT_MESSAGE
+                details == DATETIME_FORMAT_DETAILS
+            }
     }
 
     def 'Unknown error during a valueCount creation returns 500 HTTP response code status'() {
@@ -169,9 +178,11 @@ class ValueCountControllerIT extends Specification {
 
         then:
             response.statusCode() == HttpStatus.INTERNAL_SERVER_ERROR.value()
-            response.body().jsonPath().get("status") == 500
-            response.body().jsonPath().get("message") == HttpStatus.INTERNAL_SERVER_ERROR.name()
-            response.body().jsonPath().get("details") == null
+            with(response.body().jsonPath()) {
+                status == 500
+                message == HttpStatus.INTERNAL_SERVER_ERROR.name()
+                details == null
+            }
     }
 
     def 'Fetching existing valueCount by value returns 200 HTTP response code status'() {
@@ -197,9 +208,11 @@ class ValueCountControllerIT extends Specification {
 
         then:
             response.statusCode() == HttpStatus.NOT_FOUND.value()
-            response.body().jsonPath().get("status") == 404
-            response.body().jsonPath().get("message") == HttpStatus.NOT_FOUND.name()
-            response.body().jsonPath().get("details") == "Record of value '" + ANY_VALUE + "' cannot be found"
+            with(response.body().jsonPath()) {
+                status == 404
+                message == HttpStatus.NOT_FOUND.name()
+                details == "Record of value '" + ANY_VALUE + "' cannot be found"
+            }
     }
 
     def 'Unknown error during fetching a valueCount returns 500 HTTP response code status'() {

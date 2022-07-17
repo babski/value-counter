@@ -8,7 +8,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor()
+@RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ValueCountService {
 
